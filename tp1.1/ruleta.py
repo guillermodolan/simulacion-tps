@@ -5,7 +5,6 @@ from statistics import *
 from math import *
 from itertools import *
 
-# Crear una lista vacía para almacenar los resultados de las tiradas
 corridas_promedios = []
 media_esperada = 18
 frecuencia_esperada = 1 / 37
