@@ -77,7 +77,7 @@ def creacion_ventanas():
 # Crea la grafica que muestra el flujo de caja a lo largo de las tiradas
 def grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL):
     plt.figure('flujo_caja')
-    plt.plot(range(cantidad_tiradas), flujo_caja, linewidth=0.6)
+    plt.plot(range(cantidad_tiradas+1), flujo_caja, linewidth=0.6)
     plt.axhline(y=CAPITAL_INICIAL,color='b',label='Capital Inicial', linewidth=0.4)
     plt.axhline(y=0,color='r',label='0', linewidth=0.4)
     plt.xlabel("Numero de tirada")
@@ -96,7 +96,7 @@ def grafica_frecuencias_apuestas_favorables(f_relativas_apuesta_favorable, canti
 # Crea la grafica de la cantidad apostada por tirada
 def grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas):
     plt.figure('cantidad_apostada')
-    plt.plot(range(cantidad_tiradas),cantidad_apostada_por_tirada,ls='', marker = 'o', markersize=1)
+    plt.plot(range(cantidad_tiradas+1),cantidad_apostada_por_tirada,ls='', marker = 'o', markersize=1)
     # plt.axhline(y=f_relativa_esperada,color='b',label='Frec Relativa Esperada', linewidth=0.4)
     plt.xlabel("Numero de tirada")
     plt.ylabel("Cantidad apostada")
@@ -229,7 +229,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
         cantidad_tiradas = 0
         cantidad_ganadas = 0
 
-        if estrategia == 'm':
+        if estrategia == Estrategia.MARTINGALA:
             while capital > 0:
                 cantidad_tiradas += 1
                 tirada = random.choice(RULETA)
@@ -246,7 +246,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
 
-        elif estrategia == 'd':
+        elif estrategia == Estrategia.DALEMBERT:
             while capital > 0:
                 cantidad_tiradas += 1
                 tirada = random.choice(RULETA)
@@ -262,7 +262,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
 
-        elif estrategia == 'f':
+        elif estrategia == Estrategia.FIBONACCI:
             apuesta_anterior = APUESTA_INICIAL
             while capital > 0:
                 cantidad_tiradas += 1
@@ -280,7 +280,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
 
-        elif estrategia == 'p':
+        elif estrategia == Estrategia.OTRA:
             victorias_consecutivas = 0
             while capital > 0:
                 cantidad_tiradas += 1
