@@ -61,7 +61,7 @@ cantidad_corridas = 30
 # La cantidad de tiradas queda definida si el capital es finito por la bancarrota y
 # si es infinito por TCL
 apuesta_elegida = 'r'
-estrategia = 'm'
+estrategia = 'o'
 capital = 'f'
 CAPITAL_INICIAL = 10
 APUESTA_INICIAL = 1
@@ -198,10 +198,29 @@ for c in range(cantidad_corridas):
             print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
 
     elif estrategia == Estrategia.OTRA:
-        # Hay que inventar una estrategia (Paroli)
-        pass
+        victorias_consecutivas = 0
+        while capital > 0:
+            cantidad_tiradas += 1
+            tirada = random.choice(RULETA)
+            if apostar(apuesta_elegida, tirada):
+                victorias_consecutivas += 1
+                capital += apuesta
+                if victorias_consecutivas < 3:
+                    apuesta *= 2
+                else:
+                    victorias_consecutivas = 0
+                    apuesta = APUESTA_INICIAL
+            else:
+                capital -= apuesta
+                victorias_consecutivas = 0
+                apuesta = APUESTA_INICIAL
+
+            f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+            cantidad_apostada_por_tirada.append(apuesta)
+            flujo_caja.append(capital)
+            print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
+
     # Se realizan graficas
-    
     grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL)
     grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, 18/37)
     grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas)
