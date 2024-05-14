@@ -4,21 +4,10 @@
 # con i se utilizaria el TCL para ver cuantas repeticiones son suficientes
 # Hay que crear una estrategia de apuesta (o)
 import argparse
-from enum import StrEnum
+from enum import StrEnum, IntEnum
 import random
 from statistics import mean
-
 import matplotlib.pyplot as plt
-
-
-cantidad_corridas = None
-cantidad_tiradas = None
-tipo_jugada = None
-apuesta_elegida = None
-estrategia = None
-capital = None
-CAPITAL_INICIAL = None
-APUESTA_INICIAL = None
 
 # Codigos colores para la ruleta
 class Color(StrEnum):
@@ -26,12 +15,16 @@ class Color(StrEnum):
     ROJO = 'r'
     NEGRO = 'n'
 
+COLORES = set(color for color in Color)
+
 # Codigos estrategias de apuesta
 class Estrategia(StrEnum):
     MARTINGALA = 'm'
     DALEMBERT = 'd'
     FIBONACCI = 'f'
     OTRA = 'o'
+
+ESTRATEGIAS = set(estrategia for estrategia in Estrategia)
 
 # Codigos jugadas
 class Jugada(StrEnum):
@@ -50,9 +43,27 @@ class Jugada(StrEnum):
 
 JUGADAS = set(jugada for jugada in Jugada)
 
+# Codigos probabilidades
+PROBABILIDAD = {
+    Jugada.ROJO : 18/37,
+    Jugada.NEGRO : 18/37,
+    Jugada.PAR : 18/37,
+    Jugada.IMPAR : 18/37,
+    Jugada.DOCENA1 : 12/37,
+    Jugada.DOCENA2 : 12/37,
+    Jugada.DOCENA3 : 12/37,
+    Jugada.FILA1 : 12/37,
+    Jugada.FILA2 : 12/37,
+    Jugada.FILA3 : 12/37,
+    Jugada.BAJOS : 18/37,
+    Jugada.ALTOS : 18/37
+}
+# Codigos capitales
 class Capital(StrEnum):
     FINITO = 'f'
     INFINITO = 'i'
+
+CAPITALES = set(capital for capital in Capital)
 
 # Creacion ruleta
 RULETA = [
@@ -102,8 +113,7 @@ def grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas):
     plt.ylabel("Cantidad apostada")
     plt.title("Evaluacion de la evolucion de las apuestas ")
 
-
-
+# Crea la grafica de los promedios de las frecuencias relativas de apuestas favorables sobre las tiradas
 def grafica_promedio_frecuencias_relativas(promedio_frecuencia_relativa, cantidad_tiradas):
     plt.figure('promedio_frecuencia_relativa')
     plt.plot(range(cantidad_tiradas),promedio_frecuencia_relativa, linewidth=0.6)
@@ -112,43 +122,76 @@ def grafica_promedio_frecuencias_relativas(promedio_frecuencia_relativa, cantida
     plt.title("Evaluacion del promedio de las frecuencias relativas")
 
 # Detecta el tipo de apuesta elegida por el usuario y verifica si gano o perdio la apuesta
-def apostar(apuesta_elegida, tirada):
+def apostar(tipo_jugada, tirada):
     numero, color = tirada
 
     # Cuando se apuesta por un numero especifico
-    if apuesta_elegida not in JUGADAS:
-        return numero == apuesta_elegida
+    if tipo_jugada not in JUGADAS:
+        beneficio = 35
+        return numero == tipo_jugada, beneficio
 
     # Cuando no se apuesta a ningun numero y sale 0 -> las jugadas pierden
     if numero == 0: 
-        return False
+        return False, 0
     
     # Cuando se apuesta a un color
-    if apuesta_elegida == Jugada.ROJO or apuesta_elegida == Jugada.NEGRO:
-        return color == apuesta_elegida
+    if tipo_jugada == Jugada.ROJO or tipo_jugada == Jugada.NEGRO:
+        beneficio = 1
+        return color == tipo_jugada, beneficio
     
     # Cuando se apuesta par o impar
-    if apuesta_elegida == Jugada.PAR or apuesta_elegida ==  Jugada.IMPAR:
-        if apuesta_elegida == Jugada.PAR: 
-            return numero % 2 == 0
+    if tipo_jugada == Jugada.PAR or tipo_jugada ==  Jugada.IMPAR:
+        beneficio = 1
+        if tipo_jugada == Jugada.PAR: 
+            return numero % 2 == 0, beneficio
         else:
-            return numero % 2 != 0
+            return numero % 2 != 0, beneficio
     
     # Cuando se apuesta de 1 a 18 o de 19 a 36
-    if apuesta_elegida == Jugada.BAJOS or apuesta_elegida ==  Jugada.ALTOS:
-        if apuesta_elegida == Jugada.BAJOS:
-            return numero <= 18
+    if tipo_jugada == Jugada.BAJOS or tipo_jugada ==  Jugada.ALTOS:
+        beneficio = 1
+        if tipo_jugada == Jugada.BAJOS:
+            return numero <= 18, beneficio
         else:
-            return numero <= 36 and numero >= 19
+            return numero <= 36 and numero >= 19, beneficio
+    
+    # Cuando se apuesta una docena
+    if tipo_jugada == Jugada.DOCENA1 or tipo_jugada == Jugada.DOCENA2 or tipo_jugada == Jugada.DOCENA3:
+        beneficio = 2
+        if tipo_jugada == Jugada.DOCENA1:
+            return numero <= 12, beneficio
+        elif tipo_jugada == Jugada.DOCENA2:
+            return numero >= 13 and numero <= 24, beneficio
+        else:
+            return numero >= 25, beneficio
+
+    # Cuando se apuesta una fila
+    if tipo_jugada == Jugada.FILA1 or tipo_jugada == Jugada.FILA2 or tipo_jugada == Jugada.FILA3:
+        beneficio = 2
+        if tipo_jugada == Jugada.FILA1:
+            return numero in [x for x in range(1, 36, 3)], beneficio
+        elif tipo_jugada == Jugada.FILA2:
+            return numero in [x for x in range(2, 36, 3)], beneficio
+        else:
+            return numero in [x for x in range(3, 36, 3)], beneficio
+
+# Siempre es mejor elegir apuestas con un ~50% de probabilidades de ganar
+# La cantidad de tiradas queda definida si el capital es finito por la bancarrota y
+# si es infinito por TCL
+
+# Argumentos (vienen de la consola)
+# cantidad_corridas = 30
+# cantidad_tiradas = 0
+# tipo_jugada = 'r' # Rojo
+# estrategia = 'o'
+# capital = 'f'
 
 # Ejecucion de la estrategia martingala
-def estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+def estrategia_martingala(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL):
+    gano, beneficio = apostar(tipo_jugada, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         apuesta = APUESTA_INICIAL
-        # cantidad_ganadas += 1
-        gano = True
     else:
         capital -= apuesta
         apuesta *= 2
@@ -156,12 +199,11 @@ def estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INI
     return (gano ,capital, apuesta)
 
 # Ejecucion de la estrategia d'alembert
-def estrategia_dalembert(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+def estrategia_dalembert(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL):
+    gano, beneficio = apostar(tipo_jugada, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         apuesta -= 0 if apuesta == APUESTA_INICIAL else 1
-        gano = True
     else:
         capital -= apuesta
         apuesta += 1
@@ -169,13 +211,12 @@ def estrategia_dalembert(apuesta_elegida, tirada, capital, apuesta, APUESTA_INIC
     return (gano, capital, apuesta)
 
 # Ejecucion de la estrategia fibonacci
-def estrategia_fibonacci(apuesta_elegida, tirada, capital, apuesta, apuesta_anterior, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+def estrategia_fibonacci(tipo_jugada, tirada, capital, apuesta, apuesta_anterior, APUESTA_INICIAL):
+    gano, beneficio = apostar(tipo_jugada, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         nueva_apuesta = APUESTA_INICIAL if apuesta == APUESTA_INICIAL else apuesta - apuesta_anterior
         apuesta_anterior = APUESTA_INICIAL if apuesta == APUESTA_INICIAL else apuesta_anterior - nueva_apuesta
-        gano = True
     else:
         capital -= apuesta
         nueva_apuesta = apuesta_anterior + apuesta
@@ -185,17 +226,16 @@ def estrategia_fibonacci(apuesta_elegida, tirada, capital, apuesta, apuesta_ante
     return (gano, capital, apuesta, apuesta_anterior)
 
 # Ejecucion de la estrategia paroli
-def estrategia_paroli(apuesta_elegida, tirada, capital, apuesta, victorias_consecutivas, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
+def estrategia_paroli(tipo_jugada, tirada, capital, apuesta, victorias_consecutivas, APUESTA_INICIAL):
+    gano, beneficio = apostar(tipo_jugada, tirada)
+    if gano:
         victorias_consecutivas += 1
-        capital += apuesta
+        capital += (apuesta * beneficio)
         if victorias_consecutivas < 3:
             apuesta *= 2
         else:
             victorias_consecutivas = 0
             apuesta = APUESTA_INICIAL
-        gano = True
     else:
         capital -= apuesta
         victorias_consecutivas = 0
@@ -203,24 +243,19 @@ def estrategia_paroli(apuesta_elegida, tirada, capital, apuesta, victorias_conse
     
     return (gano, capital, apuesta, victorias_consecutivas)
 
-# Creacion ventanas
-creacion_ventanas()
-
-
-def finalizar_capital_infinito(promedio_frecuencia_relativa):
-    if len(promedio_frecuencia_relativa) < 5000:
+def finalizar_capital_infinito(promedio_frecuencia_relativa, probabilidad):
+    if len(promedio_frecuencia_relativa) < 1000:
         return False
-    elif abs(mean(promedio_frecuencia_relativa[:-100]) - (18/37)) < 0.06:
+    elif abs(mean(promedio_frecuencia_relativa[:-100]) - probabilidad) < 0.05:
         return True
 
 def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategia, capital):
-    CAPITAL_INICIAL = float('inf') if capital == 'i' else 40000
-    APUESTA_INICIAL = 200
-
+    CAPITAL_INICIAL = float('inf') if capital == Capital.INFINITO else 200
+    APUESTA_INICIAL = 1
 
     for c in range(cantidad_corridas):
         print('\nCorrida: ', c, '\n')
-        promedio_f_relativa = []
+        promedio_frecuencia_relativa = []
         capital = CAPITAL_INICIAL
         apuesta = APUESTA_INICIAL
         flujo_caja = [CAPITAL_INICIAL]
@@ -236,15 +271,14 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 gano, capital, apuesta = estrategia_martingala(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
-                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
-
-                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
-                    break
-
+                promedio_frecuencia_relativa.append(mean(f_relativa_apuesta_favorable))
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+                # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
+                if capital_elegido == Capital.INFINITO:
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    if terminar_ejecucion: break
 
         elif estrategia == Estrategia.DALEMBERT:
             while capital > 0:
@@ -253,14 +287,14 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 gano, capital, apuesta = estrategia_dalembert(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
-                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
-
-                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
-                    break
+                promedio_frecuencia_relativa.append(mean(f_relativa_apuesta_favorable))
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+                # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
+                if capital_elegido == Capital.INFINITO:
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    if terminar_ejecucion: break
 
         elif estrategia == Estrategia.FIBONACCI:
             apuesta_anterior = APUESTA_INICIAL
@@ -271,14 +305,14 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                                                                                 apuesta_anterior, APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
-                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
-
-                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
-                    break
+                promedio_frecuencia_relativa.append(mean(f_relativa_apuesta_favorable))
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+                # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
+                if capital_elegido == Capital.INFINITO:
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    if terminar_ejecucion: break
 
         elif estrategia == Estrategia.OTRA:
             victorias_consecutivas = 0
@@ -290,55 +324,34 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                                                                                    APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
-                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
-
-                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
-                    break
-
+                promedio_frecuencia_relativa.append(mean(f_relativa_apuesta_favorable))
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+                # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
+                if capital_elegido == Capital.INFINITO:
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    if terminar_ejecucion: break
 
         # Se realizan graficas
         grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL)
-        grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, 18 / 37)
-        grafica_promedio_frecuencias_relativas(promedio_f_relativa, cantidad_tiradas)
+        grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+        grafica_promedio_frecuencias_relativas(promedio_frecuencia_relativa, cantidad_tiradas)
         grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas)
 
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simulación de ruleta')
     parser.add_argument('-n', type=int, help='Cantidad de tiradas', required=True)
     parser.add_argument('-c', type=int, help='Cantidad de corridas', required=True)
-    parser.add_argument('-e', type=str, help='Tipo de jugada: -r --> Rojo -n --> Negro -e --> Par '
-                                             '-o --> '
-                                             'Impar -d1 --> Docena 1 -d2 --> Docena 2 -d3 --> Docena 3 -f1 --> '
-                                             'Fila 1 -f2 --> Fila 2 -f3 --> Fila 3 -a --> Altos -b --> '
-                                             'Bajos', required=True)
-    parser.add_argument('-s', choices=['m', 'd', 'f', 'p'], help='Estrategia utilizada', required=True)
-    parser.add_argument('-a', choices=['f', 'i'], help='Tipo de capital (finito o infinito)', required=True)
+    parser.add_argument('-e', choices=list(JUGADAS).extend([range(37)]), help="Tipo de jugada: ej: 10 --> Pleno 'r' --> Rojo 'n' --> Negro 'e' --> Par "
+                                            "'o' --> Impar 'd1' --> Docena 1 'd2' --> Docena 2 "
+                                            "'d3' --> Docena 3 'f1' --> Fila 1 'f2' --> Fila 2 "
+                                            "'f3' --> Fila 3 'a' --> Altos 'b' --> Bajos", required=True)
+    parser.add_argument('-s', choices=list(ESTRATEGIAS), type=str, help="Estrategia utilizada : 'm' --> Martingala"
+                                                            "'d' --> D Alembert 'f' --> Fibonacci 'o' --> Paroli", required=True)
+    parser.add_argument('-a', choices=list(CAPITALES), type=str, help="Tipo de capital: 'f' --> finito 'i' --> infinito", required=True)
     args = parser.parse_args()
 
     cantidad_tiradas = args.n
@@ -347,5 +360,8 @@ if __name__ == "__main__":
     estrategia = args.s
     capital_elegido = args.a
     veces_capital_agotado = 0
+
+    # Creacion ventanas
+    creacion_ventanas()
 
     simular_corridas(args.c, args.n, args.e, args.s, args.a)
