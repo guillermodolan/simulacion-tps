@@ -210,8 +210,7 @@ creacion_ventanas()
 def finalizar_capital_infinito(promedio_frecuencia_relativa):
     if len(promedio_frecuencia_relativa) < 5000:
         return False
-    elif (x := abs(mean(promedio_frecuencia_relativa[:-100]) - (18/37) )) < 0.06:
-        print('Valor del abs:', x)
+    elif abs(mean(promedio_frecuencia_relativa[:-100]) - (18/37)) < 0.06:
         return True
 
 def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategia, capital):
@@ -232,7 +231,6 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
 
         if estrategia == 'm':
             while capital > 0:
-                print(capital)
                 cantidad_tiradas += 1
                 tirada = random.choice(RULETA)
                 gano, capital, apuesta = estrategia_martingala(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
@@ -255,6 +253,11 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 gano, capital, apuesta = estrategia_dalembert(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
+                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
+
+                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
+                    break
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
@@ -268,6 +271,11 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                                                                                 apuesta_anterior, APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
+                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
+
+                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
+                    break
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
@@ -282,6 +290,12 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                                                                                    APUESTA_INICIAL)
                 cantidad_ganadas += 1 if gano else 0
                 f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
+                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
+
+                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
+                    break
+
                 cantidad_apostada_por_tirada.append(apuesta)
                 flujo_caja.append(capital)
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
