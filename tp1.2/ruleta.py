@@ -95,30 +95,54 @@ def apostar(apuesta_elegida, tirada):
 
     # Cuando se apuesta por un numero especifico
     if apuesta_elegida not in JUGADAS:
-        return numero == apuesta_elegida
+        beneficio = 35
+        return numero == apuesta_elegida, beneficio
 
     # Cuando no se apuesta a ningun numero y sale 0 -> las jugadas pierden
     if numero == 0: 
-        return False
+        return False, 0
     
     # Cuando se apuesta a un color
     if apuesta_elegida == Jugada.ROJO or apuesta_elegida == Jugada.NEGRO:
-        return color == apuesta_elegida
+        beneficio = 1
+        return color == apuesta_elegida, beneficio
     
     # Cuando se apuesta par o impar
     if apuesta_elegida == Jugada.PAR or apuesta_elegida ==  Jugada.IMPAR:
+        beneficio = 1
         if apuesta_elegida == Jugada.PAR: 
-            return numero % 2 == 0
+            return numero % 2 == 0, beneficio
         else:
-            return numero % 2 != 0
+            return numero % 2 != 0, beneficio
     
     # Cuando se apuesta de 1 a 18 o de 19 a 36
     if apuesta_elegida == Jugada.BAJOS or apuesta_elegida ==  Jugada.ALTOS:
+        beneficio = 1
         if apuesta_elegida == Jugada.BAJOS:
-            return numero <= 18
+            return numero <= 18, beneficio
         else:
-            return numero <= 36 and numero >= 19
-        
+            return numero <= 36 and numero >= 19, beneficio
+    
+    # Cuando se apuesta una docena
+    if apuesta_elegida == Jugada.DOCENA1 or apuesta_elegida == Jugada.DOCENA2 or apuesta_elegida == Jugada.DOCENA3:
+        beneficio = 2
+        if apuesta_elegida == Jugada.DOCENA1:
+            return numero <= 12, beneficio
+        elif apuesta_elegida == Jugada.DOCENA2:
+            return numero >= 13 and numero <= 24, beneficio
+        else:
+            return numero >= 25, beneficio
+
+    # Cuando se apuesta una fila
+    if apuesta_elegida == Jugada.FILA1 or apuesta_elegida == Jugada.FILA2 or apuesta_elegida == Jugada.FILA3:
+        beneficio = 2
+        if apuesta_elegida == Jugada.FILA1:
+            return numero in [x for x in range(1, 36, 3)], beneficio
+        elif apuesta_elegida == Jugada.FILA2:
+            return numero in [x for x in range(2, 36, 3)], beneficio
+        else:
+            return numero in [x for x in range(3, 36, 3)], beneficio
+
 # Argumentos (vienen de la consola)
 cantidad_corridas = 30
 # cantidad_tiradas = 0
@@ -133,12 +157,10 @@ APUESTA_INICIAL = 1
 
 # Ejecucion de la estrategia martingala
 def estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+    gano, beneficio = apostar(apuesta_elegida, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         apuesta = APUESTA_INICIAL
-        # cantidad_ganadas += 1
-        gano = True
     else:
         capital -= apuesta
         apuesta *= 2
@@ -147,11 +169,10 @@ def estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INI
 
 # Ejecucion de la estrategia d'alembert
 def estrategia_dalembert(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+    gano, beneficio = apostar(apuesta_elegida, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         apuesta -= 0 if apuesta == APUESTA_INICIAL else 1
-        gano = True
     else:
         capital -= apuesta
         apuesta += 1
@@ -160,12 +181,11 @@ def estrategia_dalembert(apuesta_elegida, tirada, capital, apuesta, APUESTA_INIC
 
 # Ejecucion de la estrategia fibonacci
 def estrategia_fibonacci(apuesta_elegida, tirada, capital, apuesta, apuesta_anterior, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
-        capital += apuesta
+    gano, beneficio = apostar(apuesta_elegida, tirada)
+    if gano:
+        capital += (apuesta * beneficio)
         nueva_apuesta = APUESTA_INICIAL if apuesta == APUESTA_INICIAL else apuesta - apuesta_anterior
         apuesta_anterior = APUESTA_INICIAL if apuesta == APUESTA_INICIAL else apuesta_anterior - nueva_apuesta
-        gano = True
     else:
         capital -= apuesta
         nueva_apuesta = apuesta_anterior + apuesta
@@ -176,16 +196,15 @@ def estrategia_fibonacci(apuesta_elegida, tirada, capital, apuesta, apuesta_ante
 
 # Ejecucion de la estrategia paroli
 def estrategia_paroli(apuesta_elegida, tirada, capital, apuesta, victorias_consecutivas, APUESTA_INICIAL):
-    gano = False
-    if apostar(apuesta_elegida, tirada):
+    gano, beneficio = apostar(apuesta_elegida, tirada)
+    if gano:
         victorias_consecutivas += 1
-        capital += apuesta
+        capital += (apuesta * beneficio)
         if victorias_consecutivas < 3:
             apuesta *= 2
         else:
             victorias_consecutivas = 0
             apuesta = APUESTA_INICIAL
-        gano = True
     else:
         capital -= apuesta
         victorias_consecutivas = 0
