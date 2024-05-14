@@ -40,6 +40,7 @@ class Jugada(StrEnum):
     FILA3 = 'f3'
     BAJOS = 'b'
     ALTOS = 'a'
+    PLENO = 'pl'
 
 JUGADAS = set(jugada for jugada in Jugada)
 
@@ -56,8 +57,10 @@ PROBABILIDAD = {
     Jugada.FILA2 : 12/37,
     Jugada.FILA3 : 12/37,
     Jugada.BAJOS : 18/37,
-    Jugada.ALTOS : 18/37
+    Jugada.ALTOS : 18/37,
+    Jugada.PLENO : 1/37
 }
+
 # Codigos capitales
 class Capital(StrEnum):
     FINITO = 'f'
@@ -277,7 +280,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
                 # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
                 if capital_elegido == Capital.INFINITO:
-                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else PROBABILIDAD[Jugada.PLENO])
                     if terminar_ejecucion: break
 
         elif estrategia == Estrategia.DALEMBERT:
@@ -293,7 +296,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
                 # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
                 if capital_elegido == Capital.INFINITO:
-                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else PROBABILIDAD[Jugada.PLENO])
                     if terminar_ejecucion: break
 
         elif estrategia == Estrategia.FIBONACCI:
@@ -311,7 +314,7 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
                 # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
                 if capital_elegido == Capital.INFINITO:
-                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else PROBABILIDAD[Jugada.PLENO])
                     if terminar_ejecucion: break
 
         elif estrategia == Estrategia.OTRA:
@@ -330,12 +333,12 @@ def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategi
                 print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
                 # Si el capital es infinito, verifica la condicion de finalizacion en cada iteracion
                 if capital_elegido == Capital.INFINITO:
-                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+                    terminar_ejecucion = finalizar_capital_infinito(promedio_frecuencia_relativa, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else PROBABILIDAD[Jugada.PLENO])
                     if terminar_ejecucion: break
 
         # Se realizan graficas
         grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL)
-        grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else 1/37)
+        grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, PROBABILIDAD[tipo_jugada] if tipo_jugada in PROBABILIDAD else PROBABILIDAD[Jugada.PLENO])
         grafica_promedio_frecuencias_relativas(promedio_frecuencia_relativa, cantidad_tiradas)
         grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas)
 
