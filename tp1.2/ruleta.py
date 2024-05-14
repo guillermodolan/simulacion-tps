@@ -3,10 +3,22 @@
 # con f el programa terminaria cuando se quede en bancarrota
 # con i se utilizaria el TCL para ver cuantas repeticiones son suficientes
 # Hay que crear una estrategia de apuesta (o)
-
+import argparse
 from enum import StrEnum
 import random
+from statistics import mean
+
 import matplotlib.pyplot as plt
+
+
+cantidad_corridas = None
+cantidad_tiradas = None
+tipo_jugada = None
+apuesta_elegida = None
+estrategia = None
+capital = None
+CAPITAL_INICIAL = None
+APUESTA_INICIAL = None
 
 # Codigos colores para la ruleta
 class Color(StrEnum):
@@ -33,8 +45,8 @@ class Jugada(StrEnum):
     FILA1 = 'f1'
     FILA2 = 'f2'
     FILA3 = 'f3'
-    BAJOS = 'bajos'
-    ALTOS = 'altos'
+    BAJOS = 'b'
+    ALTOS = 'a'
 
 JUGADAS = set(jugada for jugada in Jugada)
 
@@ -60,11 +72,12 @@ def creacion_ventanas():
     plt.figure('flujo_caja')
     plt.figure('f_relativas_apuesta_favorable')
     plt.figure('cantidad_apostada')
+    plt.figure('promedio_frecuencia_relativa')
 
 # Crea la grafica que muestra el flujo de caja a lo largo de las tiradas
 def grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL):
     plt.figure('flujo_caja')
-    plt.plot(range(cantidad_tiradas+1), flujo_caja, linewidth=0.6)
+    plt.plot(range(cantidad_tiradas), flujo_caja, linewidth=0.6)
     plt.axhline(y=CAPITAL_INICIAL,color='b',label='Capital Inicial', linewidth=0.4)
     plt.axhline(y=0,color='r',label='0', linewidth=0.4)
     plt.xlabel("Numero de tirada")
@@ -83,11 +96,20 @@ def grafica_frecuencias_apuestas_favorables(f_relativas_apuesta_favorable, canti
 # Crea la grafica de la cantidad apostada por tirada
 def grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas):
     plt.figure('cantidad_apostada')
-    plt.plot(range(cantidad_tiradas+1),cantidad_apostada_por_tirada,ls='', marker = 'o', markersize=1)
+    plt.plot(range(cantidad_tiradas),cantidad_apostada_por_tirada,ls='', marker = 'o', markersize=1)
     # plt.axhline(y=f_relativa_esperada,color='b',label='Frec Relativa Esperada', linewidth=0.4)
     plt.xlabel("Numero de tirada")
     plt.ylabel("Cantidad apostada")
     plt.title("Evaluacion de la evolucion de las apuestas ")
+
+
+
+def grafica_promedio_frecuencias_relativas(promedio_frecuencia_relativa, cantidad_tiradas):
+    plt.figure('promedio_frecuencia_relativa')
+    plt.plot(range(cantidad_tiradas),promedio_frecuencia_relativa, linewidth=0.6)
+    plt.xlabel("Numero de tirada")
+    plt.ylabel("Frecuencia relativa")
+    plt.title("Evaluacion del promedio de las frecuencias relativas")
 
 # Detecta el tipo de apuesta elegida por el usuario y verifica si gano o perdio la apuesta
 def apostar(apuesta_elegida, tirada):
@@ -118,18 +140,6 @@ def apostar(apuesta_elegida, tirada):
             return numero <= 18
         else:
             return numero <= 36 and numero >= 19
-        
-# Argumentos (vienen de la consola)
-cantidad_corridas = 30
-# cantidad_tiradas = 0
-# Siempre es mejor elegir apuestas con un ~50% de probabilidades de ganar
-# La cantidad de tiradas queda definida si el capital es finito por la bancarrota y
-# si es infinito por TCL
-apuesta_elegida = 'r' # Rojo
-estrategia = 'o'
-capital = 'f'
-CAPITAL_INICIAL = 10
-APUESTA_INICIAL = 1
 
 # Ejecucion de la estrategia martingala
 def estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL):
@@ -196,69 +206,132 @@ def estrategia_paroli(apuesta_elegida, tirada, capital, apuesta, victorias_conse
 # Creacion ventanas
 creacion_ventanas()
 
-# Para capital finito
-# Se ejecuta hasta que se queda sin capital, 
-# por lo tanto, es indiferente el numero de 
-# tiradas ingresado
-for c in range(cantidad_corridas):
-    print('\nCorrida: ', c, '\n')
-    capital = CAPITAL_INICIAL
-    apuesta = APUESTA_INICIAL
-    flujo_caja = [CAPITAL_INICIAL]
-    f_relativa_apuesta_favorable = []
-    cantidad_apostada_por_tirada = [apuesta]
-    cantidad_tiradas = 0
-    cantidad_ganadas = 0
 
-    if estrategia == Estrategia.MARTINGALA:
-        while capital > 0:
-            cantidad_tiradas += 1
-            tirada = random.choice(RULETA)
-            gano, capital, apuesta = estrategia_martingala(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL)
-            cantidad_ganadas += 1 if gano else 0
-            f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-            cantidad_apostada_por_tirada.append(apuesta)
-            flujo_caja.append(capital)
-            print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
-  
-    elif estrategia == Estrategia.DALEMBERT:
-        while capital > 0:
-            cantidad_tiradas += 1
-            tirada = random.choice(RULETA)
-            gano, capital, apuesta = estrategia_dalembert(apuesta_elegida, tirada, capital, apuesta, APUESTA_INICIAL)
-            cantidad_ganadas += 1 if gano else 0
-            f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-            cantidad_apostada_por_tirada.append(apuesta)
-            flujo_caja.append(capital)
-            print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
+def finalizar_capital_infinito(promedio_frecuencia_relativa):
+    if len(promedio_frecuencia_relativa) < 5000:
+        return False
+    elif (x := abs(mean(promedio_frecuencia_relativa[:-100]) - (18/37) )) < 0.06:
+        print('Valor del abs:', x)
+        return True
 
-    elif estrategia == Estrategia.FIBONACCI:
-        apuesta_anterior = APUESTA_INICIAL
-        while capital > 0:
-            cantidad_tiradas += 1
-            tirada = random.choice(RULETA)
-            gano, capital, apuesta, apuesta_anterior = estrategia_fibonacci(apuesta_elegida, tirada, capital, apuesta, apuesta_anterior, APUESTA_INICIAL)
-            cantidad_ganadas += 1 if gano else 0
-            f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-            cantidad_apostada_por_tirada.append(apuesta)
-            flujo_caja.append(capital)
-            print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
+def simular_corridas(cantidad_corridas, cantidad_tiradas, tipo_jugada, estrategia, capital):
+    CAPITAL_INICIAL = float('inf') if capital == 'i' else 40000
+    APUESTA_INICIAL = 200
 
-    elif estrategia == Estrategia.OTRA:
-        victorias_consecutivas = 0
-        while capital > 0:
-            cantidad_tiradas += 1
-            tirada = random.choice(RULETA)
-            gano, capital, apuesta, victorias_consecutivas = estrategia_paroli(apuesta_elegida, tirada, capital, apuesta, victorias_consecutivas, APUESTA_INICIAL)
-            cantidad_ganadas += 1 if gano else 0
-            f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
-            cantidad_apostada_por_tirada.append(apuesta)
-            flujo_caja.append(capital)
-            print('Tirada: ', cantidad_tiradas,'Capital: ', capital,'Apuesta: ', apuesta)
 
-    # Se realizan graficas
-    grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL)
-    grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, 18/37)
-    grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas)
+    for c in range(cantidad_corridas):
+        print('\nCorrida: ', c, '\n')
+        promedio_f_relativa = []
+        capital = CAPITAL_INICIAL
+        apuesta = APUESTA_INICIAL
+        flujo_caja = [CAPITAL_INICIAL]
+        f_relativa_apuesta_favorable = []
+        cantidad_apostada_por_tirada = [apuesta]
+        cantidad_tiradas = 0
+        cantidad_ganadas = 0
 
-plt.show()
+        if estrategia == 'm':
+            while capital > 0:
+                print(capital)
+                cantidad_tiradas += 1
+                tirada = random.choice(RULETA)
+                gano, capital, apuesta = estrategia_martingala(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
+                cantidad_ganadas += 1 if gano else 0
+                f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                promedio_f_relativa.append(mean(f_relativa_apuesta_favorable))
+                terminar_ejecucion = finalizar_capital_infinito(promedio_f_relativa)
+
+                if terminar_ejecucion and capital_elegido == Capital.INFINITO:
+                    break
+
+                cantidad_apostada_por_tirada.append(apuesta)
+                flujo_caja.append(capital)
+                print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+
+        elif estrategia == 'd':
+            while capital > 0:
+                cantidad_tiradas += 1
+                tirada = random.choice(RULETA)
+                gano, capital, apuesta = estrategia_dalembert(tipo_jugada, tirada, capital, apuesta, APUESTA_INICIAL)
+                cantidad_ganadas += 1 if gano else 0
+                f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                cantidad_apostada_por_tirada.append(apuesta)
+                flujo_caja.append(capital)
+                print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+
+        elif estrategia == 'f':
+            apuesta_anterior = APUESTA_INICIAL
+            while capital > 0:
+                cantidad_tiradas += 1
+                tirada = random.choice(RULETA)
+                gano, capital, apuesta, apuesta_anterior = estrategia_fibonacci(tipo_jugada, tirada, capital, apuesta,
+                                                                                apuesta_anterior, APUESTA_INICIAL)
+                cantidad_ganadas += 1 if gano else 0
+                f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                cantidad_apostada_por_tirada.append(apuesta)
+                flujo_caja.append(capital)
+                print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+
+        elif estrategia == 'p':
+            victorias_consecutivas = 0
+            while capital > 0:
+                cantidad_tiradas += 1
+                tirada = random.choice(RULETA)
+                gano, capital, apuesta, victorias_consecutivas = estrategia_paroli(tipo_jugada, tirada, capital,
+                                                                                   apuesta, victorias_consecutivas,
+                                                                                   APUESTA_INICIAL)
+                cantidad_ganadas += 1 if gano else 0
+                f_relativa_apuesta_favorable.append(cantidad_ganadas / cantidad_tiradas)
+                cantidad_apostada_por_tirada.append(apuesta)
+                flujo_caja.append(capital)
+                print('Tirada: ', cantidad_tiradas, 'Capital: ', capital, 'Apuesta: ', apuesta)
+
+        # Se realizan graficas
+        grafica_flujo_caja(flujo_caja, cantidad_tiradas, CAPITAL_INICIAL)
+        grafica_frecuencias_apuestas_favorables(f_relativa_apuesta_favorable, cantidad_tiradas, 18 / 37)
+        grafica_promedio_frecuencias_relativas(promedio_f_relativa, cantidad_tiradas)
+        grafica_apuestas(cantidad_apostada_por_tirada, cantidad_tiradas)
+
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Simulación de ruleta')
+    parser.add_argument('-n', type=int, help='Cantidad de tiradas', required=True)
+    parser.add_argument('-c', type=int, help='Cantidad de corridas', required=True)
+    parser.add_argument('-e', type=str, help='Tipo de jugada: -r --> Rojo -n --> Negro -e --> Par '
+                                             '-o --> '
+                                             'Impar -d1 --> Docena 1 -d2 --> Docena 2 -d3 --> Docena 3 -f1 --> '
+                                             'Fila 1 -f2 --> Fila 2 -f3 --> Fila 3 -a --> Altos -b --> '
+                                             'Bajos', required=True)
+    parser.add_argument('-s', choices=['m', 'd', 'f', 'p'], help='Estrategia utilizada', required=True)
+    parser.add_argument('-a', choices=['f', 'i'], help='Tipo de capital (finito o infinito)', required=True)
+    args = parser.parse_args()
+
+    cantidad_tiradas = args.n
+    cantidad_corridas = args.c
+    tipo_jugada = args.e
+    estrategia = args.s
+    capital_elegido = args.a
+    veces_capital_agotado = 0
+
+    simular_corridas(args.c, args.n, args.e, args.s, args.a)
